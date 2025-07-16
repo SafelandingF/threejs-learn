@@ -9,6 +9,14 @@ const App = function App() {
   const scene = new THREE.Scene();
   const gui = new GUI();
   const canvas = useRef<HTMLCanvasElement>(null);
+  const textureLoader = new THREE.TextureLoader();
+
+  const doorColorTexture = textureLoader.load(
+    "/static/textures/door/color.jpg"
+  );
+  const doorAlphaTexture = textureLoader.load(
+    "/static/textures/door/alpha.jpg"
+  );
 
   // 基本物体
   // const sphere = new THREE.Mesh(
@@ -104,7 +112,11 @@ const App = function App() {
 
   const door = new THREE.Mesh(
     new THREE.PlaneGeometry(2, 2),
-    new THREE.MeshStandardMaterial({ color: "#aa7b7b" })
+    new THREE.MeshStandardMaterial({
+      map: doorColorTexture,
+      transparent: true,
+      alphaMap: doorAlphaTexture,
+    })
   );
   door.position.z = 2 + 0.01;
   door.position.y = 1;
