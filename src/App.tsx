@@ -1,113 +1,101 @@
 import * as THREE from "three";
 import "./base.css";
-import { useEffect, useRef, useState } from "react";
-
-import gsap from "gsap";
+import GUI from "lil-gui";
+import { useEffect, useRef } from "react";
+import { OrbitControls } from "three/examples/jsm/Addons.js";
+import type { WebGLRenderer } from "three";
 
 const App = function App() {
   const scene = new THREE.Scene();
+  const gui = new GUI();
+  const canvas = useRef<HTMLCanvasElement>(null);
 
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshBasicMaterial({
-    color: "red",
-  });
-  const [mesh, setMesh] = useState(new THREE.Mesh(geometry, material));
+  // 基本物体
+  const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 32, 32),
+    new THREE.MeshStandardMaterial({ roughness: 0.7 })
+  );
+  sphere.position.y = 1;
+  scene.add(sphere);
 
-  // 水平二维加了一个垂直的z轴 z轴正方形面向自己
-  mesh.position.y = 1;
-  mesh.position.x = 1;
-  mesh.position.z = 2;
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(20, 20),
+    new THREE.MeshStandardMaterial({ color: "#a9c388" })
+  );
 
-  // 重置位置到（1，1，1）
-  mesh.position.normalize();
-  mesh.position.set(0, 1, 2);
+  floor.rotation.x = -Math.PI * 0.5;
+  floor.position.y = 0;
+  scene.add(floor);
 
-  // 场景中心与物体的距离
-  console.log(mesh.position.length());
+  // 环境光
+  const ambientLight = new THREE.AmbientLight("#FFFFFF", 0.5);
+  gui.add(ambientLight, "intensity").min(0).max(1).step(0.1);
 
-  scene.add(mesh);
+  // 直射光
+  const moonLight = new THREE.DirectionalLight("#ffffff", 1.5);
+  gui.add(moonLight, "intensity").min(0).max(1).step(0.001);
+  gui.add(moonLight.position, "x").min(-5).max(5).step(0.001);
+  gui.add(moonLight.position, "y").min(-5).max(5).step(0.001);
+  gui.add(moonLight.position, "z").min(-5).max(5).step(0.001);
+  scene.add(moonLight);
 
-  mesh.scale.x = 2;
-  mesh.rotation.z = (1 / 4) * Math.PI;
-  mesh.rotation.reorder("XZY");
-  // setMesh((pre) => {});
-  const size = {
-    width: 800,
-    height: 600,
+  const sizes = {
+    width: window.innerWidth,
+    height: window.innerHeight,
   };
-  // const camera = new THREE.PerspectiveCamera(
-  // 75,
-  // size.width / size.height,
-  // 2,
-  // 1000
-  // );
-  const camera = new THREE.OrthographicCamera();
-  camera.position.z = 6;
-  camera.position.x = 2;
+
+  // 基础相机
+  const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
+  camera.position.x = 4;
+  camera.position.y = 2;
+  camera.position.z = 5;
   scene.add(camera);
 
-  camera.lookAt(mesh.position);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const renderer = useRef<THREE.WebGLRenderer>(null);
-
-  const axesHelper = new THREE.AxesHelper(2);
-
-  const group = new THREE.Group();
-
-  scene.add(axesHelper);
-
-  scene.add(group);
-
-  const cube1 = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial({ color: "green" })
-  );
-  const cube2 = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial({ color: "yellow" })
-  );
-
-  cube1.position.x = -3;
-  group.add(cube1);
-  group.add(cube2);
-  group.position.z = 1;
+  // 避免每次刷新 丢失值
+  const renderer = useRef<WebGLRenderer>(null);
+  const controls = useRef<OrbitControls>(null);
 
   useEffect(() => {
-    if (canvas.current) {
-      renderer.current = new THREE.WebGLRenderer({ canvas: canvas.current });
-    }
-    if (renderer.current) {
-      renderer.current.setSize(size.width, size.height);
-      renderer.current.render(scene, camera);
-    }
+    // controls
+    controls.current = new OrbitControls(camera, canvas.current);
+    controls.current.enableDamping = true;
 
-    tick();
-    console.log("dis", mesh.position.distanceTo(camera.position));
+    renderer.current = new THREE.WebGLRenderer({
+      canvas: canvas.current as HTMLCanvasElement,
+    });
+    renderer.current.setSize(sizes.width, sizes.height);
+    renderer.current.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }, []);
 
-  let time = Date.now();
   const clock = new THREE.Clock();
+
   const tick = () => {
-    mesh.position.x += 0.001;
+    const elapseTime = clock.getElapsedTime();
 
-    const currentTime = Date.now();
-    const deltaTime = currentTime - time;
-    time = currentTime;
+    controls.current?.update();
 
-    const elapsedTime = clock.getElapsedTime();
-
-    mesh.rotation.z += 0.0001 * deltaTime;
-
-    camera.rotation.z = elapsedTime;
-    mesh.position.x = Math.sin(elapsedTime);
-    camera.lookAt(mesh.position);
-
-    if (renderer.current) {
-      renderer.current.render(scene, camera);
-    }
+    renderer.current?.render(scene, camera);
 
     window.requestAnimationFrame(tick);
   };
+
+  useEffect(() => {
+    tick();
+  }, []);
+
+  window.addEventListener("resize", () => {
+    // Update sizes
+    sizes.width = window.innerWidth;
+    sizes.height = window.innerHeight;
+
+    // Update camera
+    camera.aspect = sizes.width / sizes.height;
+    camera.updateProjectionMatrix();
+
+    // Update renderer
+    renderer.current?.setSize(sizes.width, sizes.height);
+    renderer.current?.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  });
 
   return (
     <>
