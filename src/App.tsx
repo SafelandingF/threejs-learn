@@ -11,12 +11,12 @@ const App = function App() {
   const canvas = useRef<HTMLCanvasElement>(null);
 
   // 基本物体
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 32, 32),
-    new THREE.MeshStandardMaterial({ roughness: 0.7 })
-  );
-  sphere.position.y = 1;
-  scene.add(sphere);
+  // const sphere = new THREE.Mesh(
+  //   new THREE.SphereGeometry(1, 32, 32),
+  //   new THREE.MeshStandardMaterial({ roughness: 0.7 })
+  // );
+  // sphere.position.y = 1;
+  // scene.add(sphere);
 
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 20),
@@ -30,6 +30,7 @@ const App = function App() {
   // 环境光
   const ambientLight = new THREE.AmbientLight("#FFFFFF", 0.5);
   gui.add(ambientLight, "intensity").min(0).max(1).step(0.1);
+  scene.add(ambientLight);
 
   // 直射光
   const moonLight = new THREE.DirectionalLight("#ffffff", 1.5);
@@ -82,6 +83,32 @@ const App = function App() {
   useEffect(() => {
     tick();
   }, []);
+
+  const house = new THREE.Group();
+  scene.add(house);
+
+  const walls = new THREE.Mesh(
+    new THREE.BoxGeometry(4, 2.5, 4),
+    new THREE.MeshStandardMaterial({ color: "#ac8e82" })
+  );
+  walls.position.y = 2.5 / 2;
+  house.add(walls);
+
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(3.5, 1, 4),
+    new THREE.MeshStandardMaterial({ color: "#b35f45" })
+  );
+  roof.position.y = 2.5 + 1.0 / 2;
+  roof.rotation.y = Math.PI * 0.25;
+  house.add(roof);
+
+  const door = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.MeshStandardMaterial({ color: "#aa7b7b" })
+  );
+  door.position.z = 2 + 0.01;
+  door.position.y = 1;
+  house.add(door);
 
   window.addEventListener("resize", () => {
     // Update sizes
